@@ -1,11 +1,13 @@
 package kdcproxy
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	krbconfig "github.com/bolkedebruin/gokrb5/v8/config"
@@ -208,12 +210,15 @@ func encode(krb5data []byte) (r []byte, err error) {
 }
 
 func awaitReply(conn net.Conn, isUdp bool, reply chan<- []byte) {
+	conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 	resp, err := io.ReadAll(conn)
 	log.Printf("debug: awaitReply: resp: %#v, err: %#v", resp, err)
 	if err != nil {
-		log.Printf("error reading from kdc due to %s", err)
-		reply <- nil
-		return
+		if !(errors.Is(err, os.ErrDeadlineExceeded) && len(resp) > 0) {
+			log.Printf("error reading from kdc due to %s", err)
+			reply <- nil
+			return
+		}
 	}
 	if isUdp {
 		// udp will be missing the length prefix so add it
