@@ -130,37 +130,37 @@ func (k *KerberosProxy) forward(realm string, data []byte) (resp []byte, err err
 	}
 
 	replies := make(chan []byte, len(kdcs))
-	for i := range kdcs {
-		conn, err := net.Dial(kdcs[i].Proto, kdcs[i].Host)
+	for _, kdc := range kdcs {
+		conn, err := net.Dial(kdc.Proto, kdc.Host)
 
 		if err != nil {
-			log.Printf("error connecting to %s due to %s, trying next if available", kdcs[i], err)
+			log.Printf("error connecting to %s due to %s, trying next if available", kdc, err)
 			continue
 		}
 		conn.SetDeadline(time.Now().Add(timeout))
 
 		// if we proxy over UDP remove the length prefix
-		if kdcs[i].Proto == "tcp" {
+		if kdc.Proto == "tcp" {
 			_, err = conn.Write(data)
 		} else {
 			_, err = conn.Write(data[4:])
 		}
 		if err != nil {
-			log.Printf("cannot write packet data to %s due to %s, trying next if available", kdcs[i], err)
+			log.Printf("cannot write packet data to %s due to %s, trying next if available", kdc, err)
 			conn.Close()
 			continue
 		}
 
-		kdcs[i].Conn = conn
-		go awaitReply(conn, kdcs[i].Proto == "udp", replies)
+		kdc.Conn = conn
+		go awaitReply(conn, kdc.Proto == "udp", replies)
 	}
 
 	reply := <-replies
 
 	// close all the connections and return the first reply
-	for kdc := range kdcs {
-		if kdcs[kdc].Conn != nil {
-			kdcs[kdc].Conn.Close()
+	for _, kdc := range kdcs {
+		if kdc.Conn != nil {
+			kdc.Conn.Close()
 		}
 		<-replies
 	}
