@@ -2,13 +2,14 @@ package kdcproxy
 
 import (
 	"fmt"
-	krbconfig "github.com/bolkedebruin/gokrb5/v8/config"
-	"github.com/jcmturner/gofork/encoding/asn1"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"time"
+
+	krbconfig "github.com/bolkedebruin/gokrb5/v8/config"
+	"github.com/jcmturner/gofork/encoding/asn1"
 )
 
 const (
@@ -102,18 +103,20 @@ func (k *KerberosProxy) forward(realm string, data []byte) (resp []byte, err err
 	if realm == "" {
 		realm = k.krb5Config.LibDefaults.DefaultRealm
 	}
-
+	log.Printf("forward: realm: %s, data: %#v", realm, data)
 	// load udp first as is the default for kerberos
 	udpCnt, udpKdcs, err := k.krb5Config.GetKDCs(realm, false)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get udp kdc for realm %s due to %s", realm, err)
 	}
+	log.Printf("GetKDCs(realm, false): udpCnt: %d, udpKdcs: %#v", udpCnt, udpKdcs)
 
 	// load tcp
 	tcpCnt, tcpKdcs, err := k.krb5Config.GetKDCs(realm, true)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get tcp kdc for realm %s due to %s", realm, err)
 	}
+	log.Printf("GetKDCs(realm, true): tcpCnt: %d, tcpKdcs: %#v", tcpCnt, tcpKdcs)
 
 	if tcpCnt+udpCnt == 0 {
 		return nil, fmt.Errorf("cannot get any kdcs (tcp or udp) for realm %s", realm)
@@ -122,9 +125,11 @@ func (k *KerberosProxy) forward(realm string, data []byte) (resp []byte, err err
 	// merge the kdcs
 	kdcs := make([]Kdc, tcpCnt+udpCnt)
 	for i := range udpKdcs {
+		log.Printf("udpKdcs[%d]", i)
 		kdcs[i] = Kdc{Realm: realm, Host: udpKdcs[i], Proto: "udp"}
 	}
 	for i := range tcpKdcs {
+		log.Printf("tcpKdcs[%d]", i)
 		kdcs[i+udpCnt] = Kdc{Realm: realm, Host: tcpKdcs[i], Proto: "tcp"}
 	}
 
