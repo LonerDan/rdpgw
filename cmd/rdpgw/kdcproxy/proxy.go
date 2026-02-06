@@ -2,13 +2,14 @@ package kdcproxy
 
 import (
 	"fmt"
-	krbconfig "github.com/bolkedebruin/gokrb5/v8/config"
-	"github.com/jcmturner/gofork/encoding/asn1"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"time"
+
+	krbconfig "github.com/bolkedebruin/gokrb5/v8/config"
+	"github.com/jcmturner/gofork/encoding/asn1"
 )
 
 const (
@@ -121,11 +122,11 @@ func (k *KerberosProxy) forward(realm string, data []byte) (resp []byte, err err
 
 	// merge the kdcs
 	kdcs := make([]Kdc, tcpCnt+udpCnt)
-	for i := range udpKdcs {
-		kdcs[i] = Kdc{Realm: realm, Host: udpKdcs[i], Proto: "udp"}
+	for _, v := range udpKdcs {
+		kdcs = append(kdcs, Kdc{Realm: realm, Host: v, Proto: "udp"})
 	}
-	for i := range tcpKdcs {
-		kdcs[i+udpCnt] = Kdc{Realm: realm, Host: tcpKdcs[i], Proto: "tcp"}
+	for _, v := range tcpKdcs {
+		kdcs = append(kdcs, Kdc{Realm: realm, Host: v, Proto: "tcp"})
 	}
 
 	replies := make(chan []byte, len(kdcs))
