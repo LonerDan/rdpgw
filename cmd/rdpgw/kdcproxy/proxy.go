@@ -76,6 +76,7 @@ func (k KerberosProxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	msg, err := decode(data)
+	log.Printf("debug: decode(data) -> msg: %#v, err: %#v", msg, err)
 	if err != nil {
 		log.Printf("Cannot unmarshal: %s", err)
 		http.Error(w, "Invalid request", http.StatusBadRequest)
@@ -83,6 +84,7 @@ func (k KerberosProxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	krb5resp, err := k.forward(msg.Realm, msg.Message)
+	log.Printf("debug: k.forward -> krb5resp: %#v, err: %#v", krb5resp, err)
 	if err != nil {
 		log.Printf("cannot forward to kdc due to %s", err)
 		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
@@ -90,6 +92,7 @@ func (k KerberosProxy) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	reply, err := encode(krb5resp)
+	log.Printf("debug: encode(krb5resp) -> reply: %#v, err: %#v", reply, err)
 	if err != nil {
 		log.Printf("unable to encode krb5 message due to %s", err)
 		http.Error(w, "encoding error", http.StatusInternalServerError)
@@ -172,6 +175,7 @@ func (k *KerberosProxy) forward(realm string, data []byte) (resp []byte, err err
 		<-replies
 	}
 
+	log.Printf("debug: reply: %#v", reply)
 	if reply != nil {
 		return reply, nil
 	}
@@ -205,6 +209,7 @@ func encode(krb5data []byte) (r []byte, err error) {
 
 func awaitReply(conn net.Conn, isUdp bool, reply chan<- []byte) {
 	resp, err := io.ReadAll(conn)
+	log.Printf("debug: awaitReply: resp: %#v, err: %#v", resp, err)
 	if err != nil {
 		log.Printf("error reading from kdc due to %s", err)
 		reply <- nil
