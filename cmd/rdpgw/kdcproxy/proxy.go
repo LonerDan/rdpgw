@@ -2,13 +2,14 @@ package kdcproxy
 
 import (
 	"fmt"
-	krbconfig "github.com/bolkedebruin/gokrb5/v8/config"
-	"github.com/jcmturner/gofork/encoding/asn1"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"time"
+
+	krbconfig "github.com/bolkedebruin/gokrb5/v8/config"
+	"github.com/jcmturner/gofork/encoding/asn1"
 )
 
 const (
@@ -119,14 +120,21 @@ func (k *KerberosProxy) forward(realm string, data []byte) (resp []byte, err err
 		return nil, fmt.Errorf("cannot get any kdcs (tcp or udp) for realm %s", realm)
 	}
 
+	log.Printf("debug: tcpCnt: %d, tcpKdcs: %#v, udpCnt: %d, udpKdcs: %#v", tcpCnt, tcpKdcs, udpCnt, udpKdcs)
+
 	// merge the kdcs
 	kdcs := make([]Kdc, tcpCnt+udpCnt)
-	for i := range udpKdcs {
-		kdcs[i] = Kdc{Realm: realm, Host: udpKdcs[i], Proto: "udp"}
+	log.Printf("debug: len(kdcs): %d", len(kdcs))
+	idx := 0
+	for k := range udpKdcs {
+		kdcs[idx] = Kdc{Realm: realm, Host: udpKdcs[k], Proto: "udp"}
+		idx += 1
 	}
-	for i := range tcpKdcs {
-		kdcs[i+udpCnt] = Kdc{Realm: realm, Host: tcpKdcs[i], Proto: "tcp"}
+	for k := range tcpKdcs {
+		kdcs[idx] = Kdc{Realm: realm, Host: tcpKdcs[k], Proto: "tcp"}
+		idx += 1
 	}
+	log.Printf("debug: len(kdcs): %d, kdcs: %#v", len(kdcs), kdcs)
 
 	replies := make(chan []byte, len(kdcs))
 	for i := range kdcs {
