@@ -128,6 +128,7 @@ func (k *KerberosProxy) forward(realm string, data []byte) (resp []byte, err err
 	for _, v := range tcpKdcs {
 		kdcs = append(kdcs, Kdc{Realm: realm, Host: v, Proto: "tcp"})
 	}
+	log.Printf("debug: collected %d kdcs (%#v)", len(kdcs), kdcs)
 
 	replies := make(chan []byte, len(kdcs))
 	for i := range kdcs {
